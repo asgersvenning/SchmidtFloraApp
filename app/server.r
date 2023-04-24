@@ -1,7 +1,8 @@
-# addResourcePath("www", "./www")
-
 server <- function(input, output, session) {
-  library(tidyverse)
+  library(dplyr)
+  library(purrr)
+  library(readr)
+  library(stringr)
   library(leaflet)
   library(pdfWheel)
   library(DT)
@@ -15,11 +16,21 @@ server <- function(input, output, session) {
     Schmidt$widget
   })
   
+  outputOptions(output, "Schmidt", suspendWhenHidden = FALSE)
+  
   ## DT setup
   DTData <- read_csv2("www/DTData.csv",
                       show_col_types = F,
                       locale = locale(decimal_mark = ",", grouping_mark = "."),
                       col_types = paste0("cccc", "nncD", paste0(rep("c",12), collapse = ""), "nncci"))
+  
+  ## Create appropriate column width spec for DT datatable
+  columnWidths <- list()
+  columnBaseWidth <- c(2, 3, 2, 2, 1, 2, 10, 10, 1, 3, 2, 2, 2, 2, 2, 2, 1, 2)
+  for (i in 1:length(columnBaseWidth)) {
+    columnWidths <- append(columnWidths, 
+                           list(list(width = paste0(columnBaseWidth[i]*20, "px"), targets = i)))
+  }
   
   ### Exposing the raw data to the user
   output$observationDataTable <- renderDT(
@@ -27,8 +38,7 @@ server <- function(input, output, session) {
       select(!c(Page, popup, rid, contains("Longitude"), contains("Latitude"))) %>% 
       datatable(
         options = list(
-          columnDefs = map2(c(2, 3, 2, 2, 1, 2, 10, 10, 1, 3, 2, 2, 2, 2, 2, 2, 1, 2), 1:18, 
-                            function(x, y) list(width = paste0(x*20, "px"), targets = y)),
+          columnDefs = columnWidths,
           # columnDefs = list(list(
           #   targets = 7:8,
           #   render = JS("$.fn.dataTable.render.ellipsis( 17, false )")
@@ -70,7 +80,6 @@ server <- function(input, output, session) {
         # plugins = "ellipsis",
         extensions = c(
           # "FixedColumns",
-          
           "Buttons"),
         escape = FALSE
       )
